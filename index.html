@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="UTF-8">
+  <title>Conexão Campo & Cidade</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+  <style>
+    body {margin:0; padding:0; background:#d0f0f0; display:flex; justify-content:center; align-items:center; height:100vh;}
+    canvas {border:5px solid #333; box-shadow:4px 4px 20px rgba(0,0,0,0.5);}
+  </style>
+</head>
+<body>
+
+<script>
+let caminhao;
+let produtos = [];
+let obstaculos = [];
+let pontos = 0;
+let velocidade = 3;
+let jogoAtivo = true;
+
+function setup() {
+  createCanvas(700, 500);
+  caminhao = new Caminhao();
+}
+
+function draw() {
+  background(135, 206, 250);
+  desenharCenario();
+
+  if (jogoAtivo) {
+    caminhao.mostrar();
+    caminhao.mover();
+
+    if (frameCount % 60 === 0) {
+      produtos.push(new Produto());
+    }
+
+    if (frameCount % 120 === 0) {
+      obstaculos.push(new Obstaculo());
+    }
+
+    for (let i = produtos.length - 1; i >= 0; i--) {
+      produtos[i].mover();
+      produtos[i].mostrar();
+      if (caminhao.coletou(produtos[i])) {
+        pontos++;
+        velocidade += 0.05;
+        produtos.splice(i, 1);
+      } else if (produtos[i].foraDaTela()) {
+        produtos.splice(i, 1);
+      }
+    }
+
+    for (let i = obstaculos.length - 1; i >= 0; i--) {
+      obstaculos[i].mover();
+      obstaculos[i].mostrar();
+      if (caminhao.bateu(obstaculos[i])) {
+        jogoAtivo = false;
+      } else if (obstaculos[i].foraDaTela()) {
+        obstaculos.splice(i, 1);
+      }
+    }
+
+    fill(0);
+    textSize(22);
+    text("Produtos Entregues: " + pontos, 20, 30);
+  } else {
+    textAlign(CENTER);
+    fill(255, 0, 0);
+    textSize(50);
+    text("Game Over", width / 2, height / 2 - 20);
+    fill(0);
+    textSize(25);
+    text("Produtos Entregues: " + pontos, width / 2, height / 2 + 20);
+    text("Pressione R para Reiniciar", width / 2, height / 2 + 60);
+  }
+}
+
+function desenharCenario() {
+  // Campo
+  fill(60, 180, 75);
+  rect(0, 0, width, height / 2);
+
+  // Cidade
+  fill(200);
+  rect(0, height / 2, width, height / 2);
+
+  // Sol
+  fill(255, 255, 0);
+  ellipse(80, 80, 60);
+
+  // Prédios
+  fill(100);
+  rect(500, 260, 50, 200);
+  rect(570, 240, 60, 220);
+  rect(640, 270, 40, 190);
+
+  // Estrada
+  fill(50);
+  rect(0, height - 100, width, 100);
+
+  // Faixas na estrada
+  stroke(255);
+  strokeWeight(4);
+  for (let i = 0; i < width; i += 40) {
+    line(i, height - 50, i + 20, height - 50);
+  }
+  noStroke();
+}
+
+function keyPressed() {
+  if (keyCode === LEFT_ARROW) {
+    caminhao.direcao = -1;
+  } else if (keyCode === RIGHT_ARROW) {
+    caminhao.direcao = 1;
+  } else if (key === 'r' || key === 'R') {
+    if (!jogoAtivo) reiniciar();
+  }
+}
+
+function keyReleased() {
+  if (keyCode === LEFT_ARROW || keyCode === RIGHT_ARROW) {
+    caminhao.direcao = 0;
+  }
+}
+
+function reiniciar() {
+  pontos = 0;
+  velocidade = 3;
+  produtos = [];
+  obstaculos = [];
+  caminhao = new Caminhao();
+  jogoAtivo = true;
+}
+
+// Caminhao
+class Caminhao {
+  constructor() {
+    this.x = width / 2;
+    this.y = height - 70;
+    this.direcao = 0;
+  }
+
+  mostrar() {
+    fill(255, 150, 0);
+    rect(this.x - 30, this.y - 20, 60, 40, 5);
+    fill(0);
+    rect(this.x + 20, this.y - 30, 20, 20, 3); // cabine
+    fill(0);
+    ellipse(this.x - 20, this.y + 20, 15);
+    ellipse(this.x + 20, this.y + 20, 15);
+  }
+
+  mover() {
+    this.x += this.direcao * 7;
+    this.x = constrain(this.x, 40, width - 40);
+  }
+
+  coletou(item) {
+    return dist(this.x, this.y, item.x, item.y) < 35;
+  }
+
+  bateu(obs) {
+    return dist(this.x, this.y, obs.x, obs.y) < 35;
+  }
+}
+
+// Produto
+class Produto {
+  constructor() {
+    this.x = random(40, width - 40);
+    this.y = -20;
+  }
+
+  mostrar() {
+    fill(255, 200, 0);
+    ellipse(this.x, this.y, 25);
+    fill(0, 180, 0);
+    ellipse(this.x + 8, this.y - 8, 10);
+  }
+
+  mover() {
+    this.y += velocidade;
+  }
+
+  foraDaTela() {
+    return this.y > height;
+  }
+}
+
+// Obstaculo
+class Obstaculo {
+  constructor() {
+    this.x = random(40, width - 40);
+    this.y = -20;
+  }
+
+  mostrar() {
+    fill(80);
+    rect(this.x - 15, this.y, 30, 30, 5);
+  }
+
+  mover() {
+    this.y += velocidade + 1;
+  }
+
+  foraDaTela() {
+    return this.y > height;
+  }
+}
+</script>
+
+</body>
+</html>
